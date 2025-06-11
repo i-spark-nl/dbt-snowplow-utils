@@ -62,6 +62,37 @@ You may obtain a copy of the Snowplow Personal and Academic License Version 1.0 
 
 {% endmacro %}
 
+{% macro redshift__get_delete_insert_merge_sql(target_tb, source, unique_key, dest_columns, incremental_predicates) -%}
+  {{ log("▶ using custom Redshift delete+insert (no alias)", info=true) }}
+
+  {#–– build the fully-qualified table name, no alias ––#}
+  {% set parts = [] %}
+  {% if target_tb.database %}  {% do parts.append(adapter.quote(target_tb.database)) %}  {% endif %}
+  {% if target_tb.schema   %}  {% do parts.append(adapter.quote(target_tb.schema))   %}  {% endif %}
+  {% do parts.append(adapter.quote(target_tb.identifier)) %}
+  {% set raw_name = parts | join('.') %}
+
+  {#–– DELETE step ––#}
+  DELETE FROM {{ raw_name }}
+  {%- if unique_key %}
+    WHERE ({{ unique_key }}) IN (
+      SELECT {{ unique_key }}
+      FROM {{ source }}
+    )
+  {%- endif %};
+
+  {#–– INSERT step ––#}
+  INSERT INTO {{ raw_name }} (
+    {{ dest_columns | join(', ') }}
+  )
+  SELECT
+    {{ dest_columns | join(', ') }}
+  FROM {{ source }}
+  {%- if incremental_predicates %}
+    WHERE {{ incremental_predicates | join(' AND ') }}
+  {%- endif %};
+{%- endmacro %}
+
 {% macro default__get_delete_insert_merge_sql(target_tb, source, unique_key, dest_columns, incremental_predicates) -%}
     {# Set default predicates to pass on #}
     {%- set predicate_override = "" -%}
