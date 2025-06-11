@@ -45,7 +45,7 @@ You may obtain a copy of the Snowplow Personal and Academic License Version 1.0 
 
         -- use those calculated min + max values to limit 'target' scan, to only the days with new data
         {% set predicate_override %}
-            DBT_INTERNAL_DEST.{{ date_column }} between '{{ lower_limit }}' and '{{ upper_limit }}'
+            {{ date_column }} between '{{ lower_limit }}' and '{{ upper_limit }}'
         {% endset %}
     {% endif %}
 
