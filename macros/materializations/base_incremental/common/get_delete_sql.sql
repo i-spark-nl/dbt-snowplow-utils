@@ -1,16 +1,16 @@
-{% call statement('delete_' ~ this.alias, fetch_result=False) %}
-  {{ log("▶ running custom DELETE without alias", info=true) }}
-  {#–– manually build the fully qualified name ––#}
+{% macro redshift__get_delete_sql(target, source, unique_key) -%}
+  {{ log("▶ using custom un-aliased DELETE", info=true) }}
+  {# build the raw table name without alias #}
   {% set parts = [] %}
-  {% if this.database %}  {% do parts.append(adapter.quote(this.database)) %}  {% endif %}
-  {% if this.schema   %}  {% do parts.append(adapter.quote(this.schema))   %}  {% endif %}
-  {% do parts.append(adapter.quote(this.identifier)) %}
+  {% if target.database %}  {% do parts.append(adapter.quote(target.database)) %}  {% endif %}
+  {% if target.schema   %}  {% do parts.append(adapter.quote(target.schema))   %}  {% endif %}
+  {% do parts.append(adapter.quote(target.identifier)) %}
   {% set raw_name = parts | join('.') %}
   DELETE FROM {{ raw_name }}
   {%- if unique_key %}
   WHERE ({{ unique_key }}) IN (
     SELECT {{ unique_key }}
-    FROM {{ tmp_relation }}
+    FROM {{ source }}
   )
   {%- endif %}
-{% endcall %}
+{%- endmacro %}
