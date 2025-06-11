@@ -1,14 +1,16 @@
-{#
-Copyright (c) 2021-present Snowplow Analytics Ltd. All rights reserved.
-This program is licensed to you under the Snowplow Personal and Academic License Version 1.0,
-and you may not use this file except in compliance with the Snowplow Personal and Academic License Version 1.0.
-You may obtain a copy of the Snowplow Personal and Academic License Version 1.0 at https://docs.snowplow.io/personal-and-academic-license-1.0/
-#}
-{% macro default__get_delete_sql(target, source, unique_key) -%}
-  delete from {{ target }}
-  where ({{ unique_key }}) in (
-    select {{ unique_key }}
-    from {{ source }}
+{% call statement('delete_' ~ this.alias, fetch_result=False) %}
+  {{ log("▶ running custom DELETE without alias", info=true) }}
+  {#–– manually build the fully qualified name ––#}
+  {% set parts = [] %}
+  {% if this.database %}  {% do parts.append(adapter.quote(this.database)) %}  {% endif %}
+  {% if this.schema   %}  {% do parts.append(adapter.quote(this.schema))   %}  {% endif %}
+  {% do parts.append(adapter.quote(this.identifier)) %}
+  {% set raw_name = parts | join('.') %}
+  DELETE FROM {{ raw_name }}
+  {%- if unique_key %}
+  WHERE ({{ unique_key }}) IN (
+    SELECT {{ unique_key }}
+    FROM {{ tmp_relation }}
   )
-{%- endmacro %}
-
+  {%- endif %}
+{% endcall %}
